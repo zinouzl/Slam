@@ -1,0 +1,7 @@
+version : '3.4'
+
+services:
+  slam_service:
+    build: .
+    volumes:
+      - .:/usr/src/app
