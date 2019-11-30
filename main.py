@@ -39,7 +39,7 @@ def frameProcessing(image, fe):
         for i,j in matches:
             x1,y1 = round(i.pt[0]),round(i.pt[1])
             x2,y2 = round(j.pt[0]),round(j.pt[1])
-            img = cv2.line(img,(x1,y1),(x2,y2), color =(225,0,0))
+            img = cv2.line(img,(x1,y1),(x2,y2), color =(0,0,255))
 
     cv2.imshow('Frame', img)
 

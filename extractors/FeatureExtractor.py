@@ -54,6 +54,7 @@ class FeatureExtractor():
 
             ratio_theashold = 0.72
             #print(knn_matches)
+            # keeping only good matches
             for m, n in knn_matches:
                 if m.distance < ratio_theashold * n.distance:
                     goodMatches.append((totalKps[m.queryIdx],self.last['kps'][m.trainIdx]))
