@@ -1,4 +1,4 @@
-import cv2 
+import cv2
 import time
 import pygame
 import numpy as np
@@ -17,24 +17,31 @@ gameDisplay = display.set_mode((display_width,display_height))
 """
 fe = fExt.FeatureExtractor()
 
-def frameProcessing(image,fe):
-    
-    #print(image.shape)
+
+def frameProcessing(image, fe):
+
+    # print(image.shape)
     heigh, wight, depth = image.shape
-    image =cv2.resize(image,(wight//3,heigh//3))
-    #cv2.imshow('Frame',image)
-    #cv2.imshow('Frame',image)   
+    image = cv2.resize(image, (wight//3, heigh//3))
+    # cv2.imshow('Frame',image)
+    # cv2.imshow('Frame',image)
     sift = cv2.xfeatures2d.SIFT_create()
     #surf = cv2.xfeatures2d.SURF_create()
     orb = cv2.ORB_create(nfeatures=1500)
-    kp,des = fe.extract(image,orb)
-    kp = sum(kp,[])
-    #print(kp)
+    kp, des ,matches= fe.extract(image, orb)
+    
+    # print(kp)
     #keypoints_sift, _ = orb.detectAndCompute(image,None)
-    img = cv2.drawKeypoints(image,kp,None,color=(0,255,0))
+    img = cv2.drawKeypoints(image, kp, None, color=(0, 255, 0))
+    if ( len(matches)!=0):
+        #print(matches)
+ 
+        for i,j in matches:
+            x1,y1 = round(i.pt[0]),round(i.pt[1])
+            x2,y2 = round(j.pt[0]),round(j.pt[1])
+            img = cv2.line(img,(x1,y1),(x2,y2), color =(225,0,0))
 
-     
-    cv2.imshow('Frame',img)
+    cv2.imshow('Frame', img)
 
 
 """
@@ -47,23 +54,17 @@ def frameProcessing(image,fe):
 """
 
 
-
-
-
 cap = cv2.VideoCapture("./videos/test_countryroad.mp4")
 
 
-if (cap.isOpened()==False):
+if (cap.isOpened() == False):
     print("Error opening")
 
 while(cap.isOpened()):
     ret, frame = cap.read()
     if ret == True:
-        
-        frameProcessing(frame,fe)
 
-        
-        
+        frameProcessing(frame, fe)
 
         if (cv2.waitKey(25) & 0xFF == ord("q")):
             break
@@ -73,5 +74,3 @@ while(cap.isOpened()):
 cap.release()
 
 cv2.destroyAllWindows()
-
-
