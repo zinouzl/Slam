@@ -1,5 +1,7 @@
 import numpy as np
 import cv2
+from skimage.transform import FundamentalMatrixTransform
+from skimage.measure import ransac
 
 
 class FeatureExtractor():
@@ -19,7 +21,7 @@ class FeatureExtractor():
         totalDes = None
         count = 0
         goodMatches = []
-       
+        filtredGoodMatches = []
 
         # print(totalDes.shape)
 
@@ -32,7 +34,7 @@ class FeatureExtractor():
                 # time.sleep(0.1)
                 kp, des = descriptor.detectAndCompute(
                     img[i:i+dy, j:j+dx], None)
-                
+
                 for p in kp:
                     # print(p.pt)
                     p.pt = (p.pt[0]+j, p.pt[1]+i)
@@ -44,7 +46,7 @@ class FeatureExtractor():
                         totalDes = des
                     else:
                         totalDes = np.append(totalDes, des, axis=0)
-        totalKps = sum(totalKps,[])
+        totalKps = sum(totalKps, [])
         if (self.last is not None):
 
             totalDes = np.float32(totalDes)
@@ -52,13 +54,43 @@ class FeatureExtractor():
 
             knn_matches = self.flann.knnMatch(totalDes, self.last['des'], k=2)
 
-            ratio_theashold = 0.72
-            #print(knn_matches)
+            ratio_theashold = 0.78
+            # print(knn_matches)
             # keeping only good matches
             for m, n in knn_matches:
                 if m.distance < ratio_theashold * n.distance:
-                    goodMatches.append((totalKps[m.queryIdx],self.last['kps'][m.trainIdx]))
-                 
+                    goodMatches.append(
+                        (totalKps[m.queryIdx], self.last['kps'][m.trainIdx]))
+
+            # filtring data using ransac over fundamental matrix transform
+            goodMatch = np.array([[i.pt, j.pt] for i, j in goodMatches])
+            # print(goodMatch.shape)
+            goodMatches = np.array(goodMatches)
+            #tKeypoint = [x[0] for x in goodMatches]
+            #lastKeypoints = [x[1] for x in goodMatches]
+            
+            tKeypoints = goodMatch[:, 0]
+            lastKeypoints = goodMatch[:, 1]
+
+            # Normalize : moving to the center by dividing over 2
+            
+            # print(lastKeypoints.shape)
+
+            model, inliers = ransac((tKeypoints,
+                                     lastKeypoints),
+                                    FundamentalMatrixTransform,
+                                    min_samples=8,
+                                    residual_threshold=0.9,
+                                    max_trials=100)
+            # print(inliers)
+            # print(inliers.shape)
+            # print(lastKeypoints.shape)
+            goodMatchesLast = goodMatches[inliers, 1]
+            goodMatchesT = goodMatches[inliers, 0]
+
+            filtredGoodMatches = [(i, j)
+                                  for i, j in zip(goodMatchesT, goodMatchesLast)]
+            # print(filtredGoodMatches)
 
         # print(goodMatches)
         """
@@ -67,5 +99,5 @@ class FeatureExtractor():
         print(len(sum(totalKps,[])))
         """
         self.last = {'kps': totalKps, 'des': totalDes}
-        print(len(goodMatches), 'matches')
-        return totalKps, totalDes, goodMatches
+        print(len(filtredGoodMatches), 'matches')
+        return totalKps, totalDes, filtredGoodMatches

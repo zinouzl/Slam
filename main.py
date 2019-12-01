@@ -17,6 +17,9 @@ gameDisplay = display.set_mode((display_width,display_height))
 """
 fe = fExt.FeatureExtractor()
 
+def deNormalize(p):
+    return (round(p.pt[0] ),round(p.pt[1]))
+
 
 def frameProcessing(image, fe):
 
@@ -25,27 +28,30 @@ def frameProcessing(image, fe):
     image = cv2.resize(image, (wight//3, heigh//3))
     # cv2.imshow('Frame',image)
     # cv2.imshow('Frame',image)
-    sift = cv2.xfeatures2d.SIFT_create()
+
+    # if you want to use sift or surf decomment these lines
+    #sift = cv2.xfeatures2d.SIFT_create()
     #surf = cv2.xfeatures2d.SURF_create()
     orb = cv2.ORB_create(nfeatures=1500)
-    kp, des ,matches= fe.extract(image, orb)
-    
+    kp, des, matches = fe.extract(image, orb)
+
     # print(kp)
     #keypoints_sift, _ = orb.detectAndCompute(image,None)
+    # drawing keypoints
     img = cv2.drawKeypoints(image, kp, None, color=(0, 255, 0))
-    if ( len(matches)!=0):
-        #print(matches)
- 
-        for i,j in matches:
-            x1,y1 = round(i.pt[0]),round(i.pt[1])
-            x2,y2 = round(j.pt[0]),round(j.pt[1])
-            img = cv2.line(img,(x1,y1),(x2,y2), color =(0,0,255))
+    if (len(matches) != 0):
+        # print(matches)
+
+        for i, j in matches:
+            x1, y1 = deNormalize(i)
+            x2, y2 = deNormalize(j)
+            img = cv2.line(img, (x1, y1), (x2, y2), color=(0, 0, 255))
 
     cv2.imshow('Frame', img)
 
 
 """
-    # if you want to use pygame for showing the vide!
+    # if you want to use pygame for showing the video!
     surf = pygame.surfarray.make_surface(np.swapaxes(image,0,1))
     gameDisplay.blit(surf,(0,0))
     display.update()
