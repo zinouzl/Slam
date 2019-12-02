@@ -1,8 +1,12 @@
 import numpy as np
 import cv2
 from skimage.transform import FundamentalMatrixTransform
+from skimage.transform import EssentialMatrixTransform
 from skimage.measure import ransac
 
+def add_ones(x):
+    x = np.concatenate((x,np.ones((x.shape[0],1))),axis=1)
+    return x
 
 class FeatureExtractor():
     # init block defind the split parameters
@@ -13,10 +17,21 @@ class FeatureExtractor():
         self.last = None
         self.GX = 2
         self.GY = 2
+        self.K = None
+        self.fEstm = []
         super().__init__()
 
+
+    # denormalize point:
+    def deNormalize(self,p):
+        return (round(p.pt[0] ),round(p.pt[1]))
+
+
+
     # extract keypoints by dividing the frame to get a distributed keyPoints
-    def extract(self, img, descriptor):
+    def extract(self, img, descriptor,K):
+        self.K = K
+        self.Kinv = np.linalg.inv(K)
         totalKps = []
         totalDes = None
         count = 0
@@ -73,25 +88,46 @@ class FeatureExtractor():
             lastKeypoints = goodMatch[:, 1]
 
             # Normalize : moving to the center by dividing over 2
-            
-            # print(lastKeypoints.shape)
+            # F = 1500
+            # tKeypoints[:,0] -= img.shape[0]//2
+            # tKeypoints[:,1] -= img.shape[1]//2
 
-            model, inliers = ransac((tKeypoints,
-                                     lastKeypoints),
-                                    FundamentalMatrixTransform,
+
+            print(lastKeypoints.shape)
+
+            tKeypoints  = np.dot(add_ones(tKeypoints),self.Kinv)
+
+
+            # tKeypoints += F
+            # lastKeypoints[:,0] -= img.shape[0]//2
+            # lastKeypoints[:,1] -= img.shape[1]//2
+            lastKeypoints = np.dot(add_ones(lastKeypoints),self.Kinv)
+            # lastKeypoints += F
+            #tKeypoints = np.dot(tKeypoints,K)
+            #lastKeypoints = np.dot(lastKeypoints,K)
+            #  print(lastKeypoints.shape)
+            
+
+            model, inliers = ransac((tKeypoints[:,0:2],
+                                     lastKeypoints[:,0:2]),
+                                    EssentialMatrixTransform,
                                     min_samples=8,
-                                    residual_threshold=0.9,
-                                    max_trials=100)
+                                    
+                                    residual_threshold=0.01,
+                                    max_trials=200)
             # print(inliers)
             # print(inliers.shape)
             # print(lastKeypoints.shape)
             goodMatchesLast = goodMatches[inliers, 1]
             goodMatchesT = goodMatches[inliers, 0]
 
+            
+            
+
             filtredGoodMatches = [(i, j)
                                   for i, j in zip(goodMatchesT, goodMatchesLast)]
             # print(filtredGoodMatches)
-
+            R,t = extractRt(model.params)
         # print(goodMatches)
         """
         print(count)
@@ -101,3 +137,32 @@ class FeatureExtractor():
         self.last = {'kps': totalKps, 'des': totalDes}
         print(len(filtredGoodMatches), 'matches')
         return totalKps, totalDes, filtredGoodMatches
+
+
+def extractRt(E):
+    S,v,D = np.linalg.svd(E)
+
+    print(S.shape)
+    print(v.shape)
+    print(D.shape)
+            #print(v)
+    # self.fEstm.append(np.sqrt(2)/((v[0]+v[1])/2))
+    diag  = np.array(([1,0,0],[0,1,0],[0,0,0]))
+
+    newE = np.dot(np.dot(S,diag),D.T)
+    S,v,D = np.linalg.svd(newE)
+
+    W = np.mat([[0,-1,0],[1,0,0],[0,0,1]],dtype=float)
+    if (np.linalg.det(D)<0):
+        D *= -1.0
+
+    #print(np.mean(self.fEstm))
+    R = np.dot(np.dot(S,W),D)
+    if np.sum(R.diagonal())<0:
+        R = np.dot(np.dot(S,W.T),D)
+    #R = s * W * d
+
+    t = S[:,2]
+    print(R)
+
+    return R,t

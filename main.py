@@ -17,8 +17,8 @@ gameDisplay = display.set_mode((display_width,display_height))
 """
 fe = fExt.FeatureExtractor()
 
-def deNormalize(p):
-    return (round(p.pt[0] ),round(p.pt[1]))
+
+F = 50
 
 
 def frameProcessing(image, fe):
@@ -26,6 +26,8 @@ def frameProcessing(image, fe):
     # print(image.shape)
     heigh, wight, depth = image.shape
     image = cv2.resize(image, (wight//3, heigh//3))
+
+    K = np.array([[F,0,image.shape[0]//2],[0,F,image.shape[1]//2],[0,0,1]])
     # cv2.imshow('Frame',image)
     # cv2.imshow('Frame',image)
 
@@ -33,7 +35,7 @@ def frameProcessing(image, fe):
     #sift = cv2.xfeatures2d.SIFT_create()
     #surf = cv2.xfeatures2d.SURF_create()
     orb = cv2.ORB_create(nfeatures=1500)
-    kp, des, matches = fe.extract(image, orb)
+    kp, des, matches = fe.extract(image, orb,K)
 
     # print(kp)
     #keypoints_sift, _ = orb.detectAndCompute(image,None)
@@ -43,8 +45,8 @@ def frameProcessing(image, fe):
         # print(matches)
 
         for i, j in matches:
-            x1, y1 = deNormalize(i)
-            x2, y2 = deNormalize(j)
+            x1, y1 = fe.deNormalize(i)
+            x2, y2 = fe.deNormalize(j)
             img = cv2.line(img, (x1, y1), (x2, y2), color=(0, 0, 255))
 
     cv2.imshow('Frame', img)
@@ -59,14 +61,14 @@ def frameProcessing(image, fe):
     print(image.shape)
 """
 
+if __name__ == '__main__':
+   cap = cv2.VideoCapture("./videos/test_countryroad.mp4")
 
-cap = cv2.VideoCapture("./videos/test_countryroad.mp4")
 
+   if (cap.isOpened() == False):
+       print("Error opening")
 
-if (cap.isOpened() == False):
-    print("Error opening")
-
-while(cap.isOpened()):
+   while(cap.isOpened()):
     ret, frame = cap.read()
     if ret == True:
 
@@ -77,6 +79,6 @@ while(cap.isOpened()):
     else:
         break
 
-cap.release()
+   cap.release()
 
-cv2.destroyAllWindows()
+   cv2.destroyAllWindows()
