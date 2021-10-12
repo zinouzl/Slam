@@ -1,4 +1,4 @@
 opencv-python == 3.4.2.16
 pygame == 1.9.6
-opencv-contrib-python==3.4.2.16
+opencv-contrib-python==3.4.7.28
 scikit-image == 0.16.2
